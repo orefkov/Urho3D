@@ -101,7 +101,7 @@ void Texture::UpdateParameters()
     // Wrapping
     glTexParameteri(target_, GL_TEXTURE_WRAP_S, GetWrapMode(addressModes_[COORD_U]));
     glTexParameteri(target_, GL_TEXTURE_WRAP_T, GetWrapMode(addressModes_[COORD_V]));
-#ifndef GL_ES_VERSION_2_0
+#if !defined(GL_ES_VERSION_2_0) || defined(GL_ES_VERSION_3_0)
     glTexParameteri(target_, GL_TEXTURE_WRAP_R, GetWrapMode(addressModes_[COORD_W]));
 #endif
 
@@ -183,7 +183,8 @@ bool Texture::IsCompressed() const
     return format_ == GL_COMPRESSED_RGBA_S3TC_DXT1_EXT || format_ == GL_COMPRESSED_RGBA_S3TC_DXT3_EXT ||
            format_ == GL_COMPRESSED_RGBA_S3TC_DXT5_EXT || format_ == GL_ETC1_RGB8_OES ||
            format_ == COMPRESSED_RGB_PVRTC_4BPPV1_IMG || format_ == COMPRESSED_RGBA_PVRTC_4BPPV1_IMG ||
-           format_ == COMPRESSED_RGB_PVRTC_2BPPV1_IMG || format_ == COMPRESSED_RGBA_PVRTC_2BPPV1_IMG;
+           format_ == COMPRESSED_RGB_PVRTC_2BPPV1_IMG || format_ == COMPRESSED_RGBA_PVRTC_2BPPV1_IMG ||
+           format_ == GL_ETC2_RGB8_OES || format_ == GL_ETC2_RGBA8_OES;
 }
 
 unsigned Texture::GetRowDataSize(int width) const
@@ -207,6 +208,9 @@ unsigned Texture::GetRowDataSize(int width) const
     case GL_RG16F:
     case GL_R32F:
 #endif
+#ifdef GL_ES_VERSION_3_0
+    case GL_DEPTH24_STENCIL8:
+#endif
         return (unsigned)(width * 4);
 
 #ifndef GL_ES_VERSION_2_0
@@ -224,6 +228,18 @@ unsigned Texture::GetRowDataSize(int width) const
     case GL_RGBA32F_ARB:
         return (unsigned)(width * 16);
 #endif
+#ifdef GL_ES_VERSION_3_0
+    case GL_R8:
+        return (unsigned) width;
+
+    case GL_RG8:
+    case GL_R16F:
+        return (unsigned) (width * 2);
+    case GL_RGBA16F:
+        return (unsigned) (width * 8);
+    case GL_RGBA32F:
+        return (unsigned) (width * 16);
+#endif
 
     case GL_COMPRESSED_RGBA_S3TC_DXT1_EXT:
         return ((unsigned)(width + 3) >> 2u) * 8;
@@ -233,7 +249,11 @@ unsigned Texture::GetRowDataSize(int width) const
         return ((unsigned)(width + 3) >> 2u) * 16;
 
     case GL_ETC1_RGB8_OES:
+    case GL_ETC2_RGB8_OES:
         return ((unsigned)(width + 3) >> 2u) * 8;
+
+    case GL_ETC2_RGBA8_OES:
+        return ((unsigned)(width + 3) >> 2u) * 16;
 
     case COMPRESSED_RGB_PVRTC_4BPPV1_IMG:
     case COMPRESSED_RGBA_PVRTC_4BPPV1_IMG:
@@ -247,6 +267,11 @@ unsigned Texture::GetRowDataSize(int width) const
         return 0;
     }
 }
+
+#ifdef GL_ES_VERSION_3_0
+#define GL_SRGB_EXT GL_SRGB
+#define GL_SRGB_ALPHA_EXT GL_SRGB8_ALPHA8
+#endif
 
 unsigned Texture::GetExternalFormat(unsigned format)
 {
@@ -270,6 +295,18 @@ unsigned Texture::GetExternalFormat(unsigned format)
     else
         return format;
 #else
+#if defined(GL_ES_VERSION_3_0)
+    if (format == GL_DEPTH_COMPONENT16 || format == GL_DEPTH_COMPONENT24 || format == GL_DEPTH_COMPONENT32F)
+        return GL_DEPTH_COMPONENT;
+    else if (format == GL_DEPTH24_STENCIL8)
+        return GL_DEPTH_STENCIL;
+    else if (format == GL_R8 || format == GL_R16F || format == GL_R32F)
+        return GL_RED;
+    else if (format == GL_RG8 || format == GL_RG16F || format == GL_RG32F)
+        return GL_RG;
+    else if (format == GL_RGBA16F || format == GL_RGBA32F || format == GL_SRGB_ALPHA_EXT || format == GL_RGBA16UI)
+        return GL_RGBA;
+#endif
     return format;
 #endif
 }
@@ -288,6 +325,20 @@ unsigned Texture::GetDataType(unsigned format)
     else
         return GL_UNSIGNED_BYTE;
 #else
+#if defined(GL_ES_VERSION_3_0)
+    if (format == GL_DEPTH_COMPONENT16 || format == GL_DEPTH_COMPONENT24 || format == GL_RGBA16UI)
+        return GL_UNSIGNED_INT;
+    else if(format == GL_DEPTH_COMPONENT32F)
+        return GL_FLOAT;
+    else if (format == GL_DEPTH24_STENCIL8)
+        return GL_UNSIGNED_INT_24_8;
+    else if (format == GL_RG16F || format == GL_RGBA16F)
+        return GL_UNSIGNED_SHORT;
+    else if (format == GL_RGBA32F || format == GL_RG32F || format == GL_R32F)
+        return GL_FLOAT;
+    else if (format == GL_RGBA16F || format == GL_RG16F || format == GL_R16F)
+        return GL_HALF_FLOAT;
+#endif
     if (format == GL_DEPTH_COMPONENT || format == GL_DEPTH_COMPONENT24_OES)
         return GL_UNSIGNED_INT;
     else if (format == GL_DEPTH_COMPONENT16)
@@ -299,7 +350,7 @@ unsigned Texture::GetDataType(unsigned format)
 
 unsigned Texture::GetSRGBFormat(unsigned format)
 {
-#ifndef GL_ES_VERSION_2_0
+#if !defined(GL_ES_VERSION_2_0) || defined(GL_ES_VERSION_3_0)
     if (!graphics_ || !graphics_->GetSRGBSupport())
         return format;
 
@@ -309,6 +360,7 @@ unsigned Texture::GetSRGBFormat(unsigned format)
         return GL_SRGB_EXT;
     case GL_RGBA:
         return GL_SRGB_ALPHA_EXT;
+#ifndef GL_ES_VERSION_3_0
     case GL_LUMINANCE:
         return GL_SLUMINANCE_EXT;
     case GL_LUMINANCE_ALPHA:
@@ -319,6 +371,7 @@ unsigned Texture::GetSRGBFormat(unsigned format)
         return GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT3_EXT;
     case GL_COMPRESSED_RGBA_S3TC_DXT5_EXT:
         return GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT;
+#endif
     default:
         return format;
     }

@@ -53,6 +53,10 @@
 #define FOURCC_DXT5 (MAKEFOURCC('D','X','T','5'))
 #define FOURCC_DX10 (MAKEFOURCC('D','X','1','0'))
 
+#define FOURCC_ETC1 (MAKEFOURCC('E', 'T', 'C', '1'))
+#define FOURCC_ETC2 (MAKEFOURCC('E', 'T', 'C', '2'))
+#define FOURCC_ETC2A (MAKEFOURCC('E', 'T', '2', 'A'))
+
 static const unsigned DDSCAPS_COMPLEX = 0x00000008U;
 static const unsigned DDSCAPS_TEXTURE = 0x00001000U;
 static const unsigned DDSCAPS_MIPMAP = 0x00400000U;
@@ -229,6 +233,10 @@ bool CompressedLevel::Decompress(unsigned char* dest)
         DecompressImageETC(dest, data_, width_, height_);
         return true;
 
+    case CF_ETC2_RGB:
+    case CF_ETC2_RGBA:
+        return false;
+
     case CF_PVRTC_RGB_2BPP:
     case CF_PVRTC_RGBA_2BPP:
     case CF_PVRTC_RGB_4BPP:
@@ -322,6 +330,21 @@ bool Image::BeginLoad(Deserializer& source)
 
         case FOURCC_DXT5:
             compressedFormat_ = CF_DXT5;
+            components_ = 4;
+            break;
+
+        case FOURCC_ETC1:
+            compressedFormat_ = CF_ETC1;
+            components_ = 3;
+            break;
+
+        case FOURCC_ETC2:
+            compressedFormat_ = CF_ETC2_RGB;
+            components_ = 3;
+            break;
+
+        case FOURCC_ETC2A:
+            compressedFormat_ = CF_ETC2_RGBA;
             components_ = 4;
             break;
 
@@ -578,6 +601,16 @@ bool Image::BeginLoad(Deserializer& source)
             components_ = 3;
             break;
 
+        case 0x9274:
+            compressedFormat_ = CF_ETC2_RGB;
+            components_ = 3;
+            break;
+
+        case 0x9278:
+            compressedFormat_ = CF_ETC2_RGBA;
+            components_ = 4;
+            break;
+
         case 0x8c00:
             compressedFormat_ = CF_PVRTC_RGB_4BPP;
             components_ = 3;
@@ -701,6 +734,16 @@ bool Image::BeginLoad(Deserializer& source)
 
         case 11:
             compressedFormat_ = CF_DXT5;
+            components_ = 4;
+            break;
+
+        case 22:
+            compressedFormat_ = CF_ETC2_RGB;
+            components_ = 3;
+            break;
+
+        case 23:
+            compressedFormat_ = CF_ETC2_RGBA;
             components_ = 4;
             break;
 

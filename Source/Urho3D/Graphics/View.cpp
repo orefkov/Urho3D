@@ -376,7 +376,7 @@ bool View::Define(RenderSurface* renderTarget, Viewport* viewport)
     geometriesUpdated_ = false;
 
 #ifdef URHO3D_OPENGL
-#ifdef GL_ES_VERSION_2_0
+#if defined(GL_ES_VERSION_2_0) && !defined(GL_ES_VERSION_3_0)
     // On OpenGL ES we assume a stencil is not available or would not give a good performance, and disable light stencil
     // optimizations in any case
     noStencil_ = true;
@@ -2278,7 +2278,7 @@ void View::ProcessLight(LightQueryResult& query, unsigned threadIndex)
     if (isShadowed && light->GetShadowDistance() > 0.0f && light->GetDistance() > light->GetShadowDistance())
         isShadowed = false;
     // OpenGL ES can not support point light shadows
-#ifdef GL_ES_VERSION_2_0
+#if defined(GL_ES_VERSION_2_0) && !defined(GL_ES_VERSION_3_0)
     if (isShadowed && type == LIGHT_POINT)
         isShadowed = false;
 #endif
