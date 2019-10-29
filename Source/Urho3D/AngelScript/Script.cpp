@@ -36,6 +36,60 @@
 
 #include "../DebugNew.h"
 
+using namespace Urho3D;
+#ifdef __ANDROID__
+#include <jni.h>
+#include <SDL/SDL_Log.h>
+#include <SDL/SDL_events.h>
+#include "../Core/CoreEvents.h"
+#define URHO3D_MSG 99
+
+extern "C"
+{
+    // function to post string messages to main activity UI thread.
+    int Android_JNI_SendStrMessage(int, const char*);
+}
+
+static void PostStrToActivity(const String& param)
+{
+    Android_JNI_SendStrMessage(URHO3D_MSG, param.CString());
+}
+
+extern "C" {
+/**
+ * Function for correctly sending string messages from the main UI activity thread to the SDL game thread.
+   Data is placed in the object and post to the SDL message queue.
+   In input.cpp in HandleSDLEvent data unpacked and generate SendEvent in main SDL game thread.
+ */
+JNIEXPORT void Java_org_libsdl_app_SDLActivity_nativeUserActivityCallback(JNIEnv* env, jclass cls, jstring json)
+{
+    const char *str = env->GetStringUTFChars(json, 0);
+    VariantMap* pArgs = new VariantMap;
+    (*pArgs)[AndroidService::P_DATA] = String(str);
+    SDL_Event event;
+    SDL_zero(event);
+    event.type = userEventType;
+    event.user.code = E_ANDROID_SERVICE.Value();
+    event.user.data2 = pArgs;
+    SDL_PushEvent(&event);
+    if (str)
+        env->ReleaseStringUTFChars(json, str);
+}
+}
+#else
+static void PostStrToActivity(const String& param)
+{
+    // do nothing in non Android
+}
+#endif
+
+void registerAndroidInAS(asIScriptEngine* engine)
+{
+    // We must register the function in all platforms, since scripts do not have a conditional
+    // preprocessor and recognize the platform in runtime
+    engine->RegisterGlobalFunction("void PostCommandToAndroid(const String& param)", asFUNCTION(PostStrToActivity), asCALL_CDECL);
+}
+
 namespace Urho3D
 {
 
@@ -151,6 +205,7 @@ Script::Script(Context* context) :
         router_ = new ScriptResourceRouter(context_);
         cache->AddResourceRouter(router_);
     }
+    registerAndroidInAS(scriptEngine_);
 }
 
 Script::~Script()

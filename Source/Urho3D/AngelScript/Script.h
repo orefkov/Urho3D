@@ -153,3 +153,9 @@ private:
 void URHO3D_API RegisterScriptLibrary(Context* context);
 
 }
+
+#ifdef __ANDROID__
+URHO3D_EVENT(E_ANDROID_SERVICE, AndroidService) {
+    URHO3D_PARAM(P_DATA, Data);	   // string
+}
+#endif

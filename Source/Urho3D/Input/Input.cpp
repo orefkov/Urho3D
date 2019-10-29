@@ -68,6 +68,7 @@ const StringHash VAR_LAST_KEYSYM("VAR_LAST_KEYSYM");
 const StringHash VAR_SCREEN_JOYSTICK_ID("VAR_SCREEN_JOYSTICK_ID");
 
 const unsigned TOUCHID_MAX = 32;
+int userEventType = 0;
 
 /// Convert SDL keycode if necessary.
 Key ConvertSDLKeyCode(int keySym, int scanCode)
@@ -379,6 +380,7 @@ Input::Input(Context* context) :
     mouseMoveScaled_(false),
     initialized_(false)
 {
+    userEventType = SDL_RegisterEvents(1);
     context_->RequireSDL(SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER);
 
     for (int i = 0; i < TOUCHID_MAX; i++)
@@ -2389,7 +2391,26 @@ void Input::HandleSDLEvent(void* sdlEvent)
         SendEvent(E_EXITREQUESTED);
         break;
 
-    default: break;
+    default:
+        if (evt.type == userEventType)
+        {
+            if (evt.user.code)
+            {
+                Object* sender = reinterpret_cast<Object*>(evt.user.data1);
+                if (!sender)
+                    sender = this;
+                VariantMap* pMap = reinterpret_cast<VariantMap*>(evt.user.data2);
+                StringHash eventType((unsigned)evt.user.code);
+                if (!pMap)
+                    sender->SendEvent(eventType);
+                else
+                {
+                    sender->SendEvent(eventType, *pMap);
+                    delete pMap;
+                }
+            }
+        }
+        break;
     }
 }
 

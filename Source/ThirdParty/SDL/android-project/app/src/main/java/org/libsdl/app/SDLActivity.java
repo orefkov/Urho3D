@@ -757,6 +757,7 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
     public static native void nativeSetenv(String name, String value);
     public static native void onNativeOrientationChanged(int orientation);
     public static native void nativeAddTouch(int touchId, String name);
+    public static native void nativeUserActivityCallback(String json);
 
     /**
      * This method is called by SDL using JNI.
@@ -927,6 +928,16 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
             return false;
         }
         return mSingleton.sendCommand(command, Integer.valueOf(param));
+    }
+
+    /**
+     * This method is called by SDL using JNI.
+     */
+    public static boolean sendStrMessage(int command, String param) {
+        if (mSingleton == null) {
+            return false;
+        }
+        return mSingleton.sendCommand(command, param);
     }
 
     /**

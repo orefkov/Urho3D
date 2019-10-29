@@ -254,6 +254,7 @@ static jmethodID midIsDeXMode;
 static jmethodID midManualBackButton;
 static jmethodID midInitTouch;
 static jmethodID midSendMessage;
+static jmethodID midSendStrMessage;
 static jmethodID midShowTextInput;
 static jmethodID midIsScreenKeyboardShown;
 static jmethodID midClipboardSetText;
@@ -525,6 +526,8 @@ JNIEXPORT void JNICALL SDL_JAVA_INTERFACE(nativeSetupJNI)(JNIEnv* env, jclass cl
                                 "initTouch", "()V");
     midSendMessage = (*env)->GetStaticMethodID(env, mActivityClass,
                                 "sendMessage", "(II)Z");
+    midSendStrMessage = (*env)->GetStaticMethodID(env, mActivityClass,
+                                "sendStrMessage", "(ILjava/lang/String;)Z");
     midShowTextInput =  (*env)->GetStaticMethodID(env, mActivityClass,
                                 "showTextInput", "(IIII)Z");
     midIsScreenKeyboardShown = (*env)->GetStaticMethodID(env, mActivityClass,
@@ -2343,6 +2346,16 @@ int Android_JNI_SendMessage(int command, int param)
     JNIEnv *env = Android_JNI_GetEnv();
     jboolean success;
     success = (*env)->CallStaticBooleanMethod(env, mActivityClass, midSendMessage, command, param);
+    return success ? 0 : -1;
+}
+
+/* sends string message to be handled on the UI event dispatch thread */
+int Android_JNI_SendStrMessage(int command, const char *param) {
+    JNIEnv *mEnv = Android_JNI_GetEnv();
+    jstring jparam = (jstring)((*mEnv)->NewStringUTF(mEnv, param));
+    jboolean success;
+    success = (*mEnv)->CallStaticBooleanMethod(mEnv, mActivityClass, midSendStrMessage, command, jparam);
+    (*mEnv)->DeleteLocalRef(mEnv, jparam);
     return success ? 0 : -1;
 }
 
